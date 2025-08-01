@@ -1,0 +1,19 @@
+<form method="POST" action="/predict">
+    <label for="department">Department:</label>
+    <select name="department" id="department" required>
+        {% for dept in departments %}
+        <option value="{{ dept }}">{{ dept }}</option>
+        {% endfor %}
+    </select>
+    <br><br>
+
+    <label for="year">Year:</label>
+    <input type="number" id="year" name="year" value="{{ year }}" readonly>
+    <br><br>
+
+    <button type="submit">Predict Risk Level</button>
+</form>
+
+{% if prediction_text %}
+<p><strong>{{ prediction_text }}</strong></p>
+{% endif %}
