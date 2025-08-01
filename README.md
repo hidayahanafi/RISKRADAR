@@ -13,11 +13,3 @@ This project predicts audit risk levels for internal departments based on past d
 - Scikit-learn, Pandas, NumPy, Joblib
 - HTML (Jinja2 templates)
 
-## 📦 How to Run
-
-```bash
-git clone https://github.com/yourusername/RISKRADAR.git
-cd audit-risk-prediction-app
-pip install -r requirements.txt
-cd app
-python app.py
