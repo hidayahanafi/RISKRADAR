@@ -1,19 +1,69 @@
-<form method="POST" action="/predict">
-    <label for="department">Department:</label>
-    <select name="department" id="department" required>
-        {% for dept in departments %}
-        <option value="{{ dept }}">{{ dept }}</option>
-        {% endfor %}
-    </select>
-    <br><br>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RiskRadar – Audit Risk Prediction</title>
+  <style>
+    :root { --bg:#f6f7f9; --card:#fff; --text:#1c2330; --muted:#5b6575; --accent:#d04a02; --line:#dde1e8;
+            --High:#c0392b; --Medium:#e08e0b; --Low:#2e8b57; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#14171c; --card:#1e232b; --text:#e8ebf0; --muted:#9aa4b2; --line:#303744; }
+    }
+    body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    main { max-width:520px; margin:0 auto; padding:24px 16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; margin-bottom:16px; }
+    h1 { font-size:1.4rem; margin:0 0 4px; } p.sub { color:var(--muted); margin:0 0 20px; }
+    label { display:block; font-weight:600; margin:14px 0 4px; }
+    select, button { width:100%; padding:10px; font-size:1rem; border-radius:6px; border:1px solid var(--line);
+                     background:var(--card); color:var(--text); box-sizing:border-box; }
+    button { background:var(--accent); color:#fff; border:0; margin-top:20px; cursor:pointer; font-weight:600; }
+    .error { color:var(--High); font-weight:600; }
+    .bar { display:flex; align-items:center; gap:8px; margin:6px 0; font-size:.9rem; }
+    .bar span.n { width:60px; } .bar .track { flex:1; height:10px; background:var(--line); border-radius:5px; overflow:hidden; }
+    .bar .fill { height:100%; } .bar span.v { width:48px; text-align:right; }
+    .badge { display:inline-block; padding:2px 10px; border-radius:12px; color:#fff; font-weight:700; }
+    .note { font-size:.85rem; color:var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>RiskRadar</h1>
+    <p class="sub">Estimate audit risk level by department, finding type and month.</p>
+    <form method="POST" action="/predict">
+      <label for="department">Department</label>
+      <select name="department" id="department" required>
+        {% for d in departments %}<option value="{{ d }}" {{ 'selected' if form.get('department') == d }}>{{ d }}</option>{% endfor %}
+      </select>
+      <label for="finding">Audit finding</label>
+      <select name="finding" id="finding" required>
+        {% for f in findings %}<option value="{{ f }}" {{ 'selected' if form.get('finding') == f }}>{{ f }}</option>{% endfor %}
+      </select>
+      <label for="month">Month</label>
+      <select name="month" id="month" required>
+        {% for m in months %}<option value="{{ loop.index }}" {{ 'selected' if form.get('month') == loop.index|string }}>{{ m }}</option>{% endfor %}
+      </select>
+      <button type="submit">Predict risk level</button>
+    </form>
+  </div>
 
-    <label for="year">Year:</label>
-    <input type="number" id="year" name="year" value="{{ year }}" readonly>
-    <br><br>
+  {% if error %}<div class="card error" role="alert">{{ error }}</div>{% endif %}
 
-    <button type="submit">Predict Risk Level</button>
-</form>
+  {% if result %}
+  <div class="card" aria-live="polite">
+    <h2 style="margin-top:0">Predicted risk: <span class="badge" style="background:var(--{{ result.risk_level }})">{{ result.risk_level }}</span></h2>
+    {% for level, p in result.probabilities.items() %}
+    <div class="bar"><span class="n">{{ level }}</span>
+      <div class="track"><div class="fill" style="width:{{ (p*100)|round(1) }}%;background:var(--{{ level }})"></div></div>
+      <span class="v">{{ (p*100)|round(1) }}%</span></div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
-{% if prediction_text %}
-<p><strong>{{ prediction_text }}</strong></p>
-{% endif %}
+  <p class="note">Model: {{ meta.model }} · held-out F1 (macro) {{ '%.2f'|format(meta.test_f1_macro) }}, trained on {{ meta.n_rows }} audits.
+    In the current dataset the three risk levels are almost evenly spread across every input, so this score is close to chance
+    (≈0.33). Treat the output as illustrative, not as a basis for audit decisions.</p>
+</main>
+</body>
+</html>
