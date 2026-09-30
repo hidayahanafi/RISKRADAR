@@ -99,6 +99,9 @@ Held-out test F1-macro: **0.336**.
 
 The best model is only marginally above chance (0.333 for three balanced classes). In this dataset the risk levels are spread almost evenly (~33% each) across every department, finding type and month, so the available features carry little predictive signal. **Predictions should be treated as illustrative and not used for audit decisions.**
 
+## Related: Solvency 2 SCR tool
+The [`solvency2/`](solvency2/) folder contains a small actuarial tool that aggregates risk module charges into the SCR with the standard-formula correlation matrix, with tests and an Excel report.
+
 ## Roadmap
 - Add informative features (prior findings, control test results, financial exposure, audit scope).
 - Extend data beyond 2022 to support temporal validation.
