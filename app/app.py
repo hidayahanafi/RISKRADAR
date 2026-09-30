@@ -1,32 +1,75 @@
-from flask import Flask, request, render_template
+import json
+from pathlib import Path
+
 import joblib
-import numpy as np
+import pandas as pd
+from flask import Flask, jsonify, render_template, request
+
+BASE = Path(__file__).resolve().parent
 
 app = Flask(__name__)
 
-model = joblib.load('best_model.pkl')
-label_encoders = joblib.load('label_encoders.pkl')
+model = joblib.load(BASE / "model.joblib")
+meta = json.loads((BASE / "model_meta.json").read_text())
+DEPARTMENTS = meta["departments"]
+FINDINGS = meta["findings"]
+MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
 
-departments = list(label_encoders['Department'].classes_)
 
-@app.route('/')
+def predict_risk(department: str, finding: str, month: int) -> dict:
+    if department not in DEPARTMENTS:
+        raise ValueError(f"Unknown department: {department!r}")
+    if finding not in FINDINGS:
+        raise ValueError(f"Unknown audit finding: {finding!r}")
+    if not 1 <= month <= 12:
+        raise ValueError("Month must be between 1 and 12")
+
+    row = pd.DataFrame([{"Department": department, "Audit_Finding": finding, "Month": month}])
+    proba = model.predict_proba(row)[0]
+    probabilities = {c: round(float(p), 4) for c, p in zip(model.classes_, proba)}
+    top = max(probabilities, key=probabilities.get)
+    return {"risk_level": top, "probabilities": probabilities}
+
+
+def render(result=None, error=None, form=None):
+    return render_template(
+        "index.html", departments=DEPARTMENTS, findings=FINDINGS, months=MONTHS,
+        meta=meta, result=result, error=error, form=form or {},
+    ), (400 if error else 200)
+
+
+@app.get("/")
 def home():
-    from datetime import datetime
-    next_year = datetime.now().year + 1
-    return render_template('index.html', departments=departments, year=next_year, prediction_text=None)
+    return render()
 
-@app.route('/predict', methods=['POST'])
+
+@app.post("/predict")
 def predict():
-    department = request.form['department']
-    year = int(request.form['year'])
+    form = request.form
+    try:
+        result = predict_risk(
+            form.get("department", ""), form.get("finding", ""), int(form.get("month", "")),
+        )
+    except ValueError as e:
+        return render(error=str(e), form=form)
+    return render(result=result, form=form)
 
-    department_encoded = label_encoders['Department'].transform([department])[0]
 
-    most_common_audit_finding = label_encoders['Audit_Finding'].classes_[0]  
-    audit_finding_encoded = label_encoders['Audit_Finding'].transform([most_common_audit_finding])[0]
+@app.post("/api/predict")
+def api_predict():
+    data = request.get_json(silent=True) or {}
+    try:
+        return jsonify(predict_risk(data.get("department", ""), data.get("finding", ""),
+                                    int(data.get("month", 0))))
+    except (ValueError, TypeError) as e:
+        return jsonify(error=str(e)), 400
 
-    input_data = np.array([[department_encoded, audit_finding_encoded, year]])
-    prediction_encoded = model.predict(input_data)[0]
-    prediction = label_encoders['Risk_Level'].inverse_transform([prediction_encoded])[0]
 
-    return render_template('index.html', departments=departments, year=year, prediction_text=f'Predicted Risk Level for {year}: {prediction}')
+@app.get("/healthz")
+def healthz():
+    return jsonify(status="ok", model=meta["model"])
+
+
+if __name__ == "__main__":
+    app.run(debug=False)

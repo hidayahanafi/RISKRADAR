@@ -1,0 +1,29 @@
+{
+  "model": "Random Forest",
+  "classes": [
+    "High",
+    "Low",
+    "Medium"
+  ],
+  "departments": [
+    "Finance",
+    "HR",
+    "IT",
+    "Marketing",
+    "Operations"
+  ],
+  "findings": [
+    "Control Weakness",
+    "Fraudulent Activity",
+    "Non-compliance"
+  ],
+  "cv_f1_macro": {
+    "Baseline (most frequent)": 0.16827086070648561,
+    "Logistic Regression": 0.3247818185285368,
+    "Decision Tree": 0.32627778211540315,
+    "Random Forest": 0.33929757781243564
+  },
+  "test_f1_macro": 0.3361583134030309,
+  "baseline_f1_macro": 0.16827086070648561,
+  "n_rows": 10001
+}
